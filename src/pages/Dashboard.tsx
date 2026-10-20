@@ -68,7 +68,7 @@ const StatCard = ({ title, value, icon, color, onClick, delay }: StatCardProps) 
 };
 
 const Dashboard = () => {
-  const { books } = useBooks();
+  const { books, loading, error, refetchBooks } = useBooks();
   const navigate = useNavigate();
 
   const stats = {
@@ -103,6 +103,33 @@ const Dashboard = () => {
           + ADD NEW BOOK
         </Link>
       </div>
+
+      {error && (
+        <div className="comic-panel bg-red-100 p-4 sm:p-6 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">💥</span>
+            <div>
+              <h3 className="font-bangers text-xl text-red-800">Database Connection Notice</h3>
+              <p className="font-outfit text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => refetchBooks()}
+            className="comic-button bg-white text-ink text-sm py-2 px-4 shadow-comic-sm"
+          >
+            RETRY
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="comic-panel bg-white p-12 text-center my-8">
+          <div className="inline-block animate-bounce mb-4 text-4xl">🚀</div>
+          <h2 className="text-3xl font-bangers">CONNECTING TO GLOBAL BOOKVERSE...</h2>
+          <p className="font-outfit text-gray-500 mt-2 font-bold">Retrieving reading logs from Supabase...</p>
+        </div>
+      ) : (
+        <>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
         <StatCard 
@@ -187,6 +214,8 @@ const Dashboard = () => {
           </motion.div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

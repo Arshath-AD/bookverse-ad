@@ -37,6 +37,8 @@ const BookForm = () => {
   const isEditing = !!id;
   const existingBook = isEditing ? books.find(b => b.id === id) : null;
   const [previewError, setPreviewError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<BookFormData>({
     title: '',
@@ -134,8 +136,10 @@ const BookForm = () => {
     setFormData(prev => ({ ...prev, impactScore: score }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+    setIsSubmitting(true);
 
     const totalPagesNum = typeof formData.totalPages === 'number' && formData.totalPages > 0 
       ? formData.totalPages 
@@ -148,7 +152,7 @@ const BookForm = () => {
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     
     if (isEditing && existingBook) {
-      updateBook(existingBook.id, {
+      const res = await updateBook(existingBook.id, {
         ...formData,
         title: formData.title.trim(),
         author: formData.author.trim(),
@@ -158,10 +162,15 @@ const BookForm = () => {
         startedDate: formData.startedDate || null,
         finishedDate: formData.finishedDate || null,
       });
+      setIsSubmitting(false);
+      if (res?.error) {
+        setSubmitError(`Could not update book: ${res.error.message}`);
+        return;
+      }
       navigate(`/book/${existingBook.id}`);
     } else {
       const newBook: Book = {
-        id: Date.now().toString(),
+        id: (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
         title: formData.title.trim() || 'Untitled Adventure',
         author: formData.author.trim() || 'Unknown Explorer',
         coverImage: formData.coverImage.trim() || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop',
@@ -177,15 +186,27 @@ const BookForm = () => {
         impactScore: formData.impactScore || 0,
         accentColor: randomColor,
       };
-      addBook(newBook);
-      navigate(`/book/${newBook.id}`);
+      const res = await addBook(newBook);
+      setIsSubmitting(false);
+      if (res?.error) {
+        setSubmitError(`Could not add book to universe: ${res.error.message}`);
+        return;
+      }
+      const targetId = res?.data?.id || newBook.id;
+      navigate(`/book/${targetId}`);
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this book? This timeline will be erased forever!")) {
       if (existingBook) {
-        deleteBook(existingBook.id);
+        setIsSubmitting(true);
+        const res = await deleteBook(existingBook.id);
+        setIsSubmitting(false);
+        if (res?.error) {
+          alert(`Failed to delete book: ${res.error.message}`);
+          return;
+        }
         navigate('/dashboard');
       }
     }
@@ -436,8 +457,18 @@ const BookForm = () => {
           </div>
         </div>
 
-        <button type="submit" className="comic-button bg-[var(--color-primary)] text-2xl md:text-3xl py-4 md:py-6 mt-2 md:mt-4 hover:bg-yellow-400">
-          {isEditing ? 'UPDATE UNIVERSE' : 'ADD TO UNIVERSE'}
+        {submitError && (
+          <div className="border-comic border-ink bg-red-100 p-4 font-bangers text-xl text-red-700 shadow-comic-sm">
+            💥 ERROR: {submitError}
+          </div>
+        )}
+
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="comic-button bg-[var(--color-primary)] text-2xl md:text-3xl py-4 md:py-6 mt-2 md:mt-4 hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? 'SAVING TO UNIVERSE...' : (isEditing ? 'UPDATE UNIVERSE' : 'ADD TO UNIVERSE')}
         </button>
 
       </form>
