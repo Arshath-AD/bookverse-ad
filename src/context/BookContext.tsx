@@ -32,15 +32,26 @@ const BookContext = createContext<BookContextType | undefined>(undefined);
 
 export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [books, setBooks] = useState<Book[]>(() => {
-    const saved = localStorage.getItem('bookverse_books');
-    if (saved) {
-      return JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem('bookverse_books');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load books from localStorage:', e);
     }
     return initialBooks as Book[];
   });
 
   useEffect(() => {
-    localStorage.setItem('bookverse_books', JSON.stringify(books));
+    try {
+      localStorage.setItem('bookverse_books', JSON.stringify(books));
+    } catch (e) {
+      console.error('Failed to save books to localStorage:', e);
+    }
   }, [books]);
 
   const addBook = (book: Book) => {

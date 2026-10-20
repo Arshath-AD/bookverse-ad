@@ -1,12 +1,14 @@
 
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useBooks, Book, BookStatus } from '../context/BookContext';
 import { LightningSVG, InkBurstSVG } from '../components/Icons';
 
 const BookCard = ({ book, index }: { book: Book, index: number }) => {
   const navigate = useNavigate();
-  const progress = Math.round((book.currentPage / book.totalPages) * 100);
+  const total = book.totalPages > 0 ? book.totalPages : 1;
+  const progress = Math.min(100, Math.max(0, Math.round(((book.currentPage || 0) / total) * 100)));
 
   return (
     <motion.div
@@ -26,6 +28,9 @@ const BookCard = ({ book, index }: { book: Book, index: number }) => {
         <img 
           src={book.coverImage} 
           alt={book.title} 
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop';
+          }}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
         <div className="absolute top-2 right-2 flex flex-col gap-2">
@@ -90,10 +95,22 @@ const BookCard = ({ book, index }: { book: Book, index: number }) => {
 const Collections = () => {
   const { status } = useParams<{ status: BookStatus | 'all' }>();
   const { books } = useBooks();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('ALL');
 
-  const filteredBooks = status && status !== 'all' 
-    ? books.filter(b => b.status === status)
-    : books;
+  const genres = useMemo(() => {
+    const list = Array.from(new Set(books.map(b => b.genre).filter(Boolean)));
+    return ['ALL', ...list];
+  }, [books]);
+
+  const filteredBooks = books.filter(b => {
+    const matchesStatus = !status || status === 'all' || b.status === status;
+    const matchesGenre = selectedGenre === 'ALL' || b.genre?.toLowerCase() === selectedGenre.toLowerCase();
+    const matchesSearch = !searchTerm.trim() || 
+      b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      b.author.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesGenre && matchesSearch;
+  });
 
   const titles = {
     'reading': 'Current Expedition',
@@ -115,25 +132,43 @@ const Collections = () => {
           </span>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <input 
             type="text" 
             placeholder="SEARCH UNIVERSE..." 
-            className="comic-input w-full md:w-64"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="comic-input w-full md:w-56"
           />
-          <select className="comic-input bg-white cursor-pointer font-bangers uppercase">
-            <option>All Genres</option>
-            <option>Sci-Fi</option>
-            <option>Fantasy</option>
+          <select 
+            value={selectedGenre} 
+            onChange={(e) => setSelectedGenre(e.target.value)} 
+            className="comic-input bg-white cursor-pointer font-bangers uppercase"
+          >
+            {genres.map(g => (
+              <option key={g} value={g}>{g === 'ALL' ? 'All Genres' : g}</option>
+            ))}
           </select>
+          <Link 
+            to="/add-book" 
+            className="comic-button bg-[var(--color-green)] text-white text-base md:text-lg py-2 px-4 shadow-comic-sm whitespace-nowrap"
+          >
+            + ADD BOOK
+          </Link>
         </div>
       </div>
 
       {filteredBooks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 border-[var(--comic-border)] border-[var(--color-ink)] bg-white border-dashed">
+        <div className="flex flex-col items-center justify-center py-20 border-[var(--comic-border)] border-[var(--color-ink)] bg-white border-dashed px-4 text-center">
           <InkBurstSVG className="w-24 h-24 mb-6 opacity-20" filled={false} />
           <h2 className="text-3xl font-bangers">No Books Found Here!</h2>
           <p className="font-outfit text-xl mt-2 text-gray-500">Time to add some new adventures to your universe.</p>
+          <Link 
+            to="/add-book" 
+            className="comic-button bg-[var(--color-green)] text-white text-lg py-3 px-6 mt-6 shadow-comic-sm"
+          >
+            + ADD BOOK TO UNIVERSE
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">

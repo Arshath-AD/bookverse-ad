@@ -53,15 +53,13 @@ const Navbar = () => {
         </div>
 
         <div className="flex gap-4 items-center">
-          <button 
-            onClick={() => {
-              setIsMenuOpen(false);
-              window.location.hash = '#/add-book';
-            }}
+          <Link 
+            to="/add-book"
+            onClick={() => setIsMenuOpen(false)}
             className="hidden md:flex comic-button bg-green text-white text-lg py-2 px-4 whitespace-nowrap shadow-comic-sm"
           >
             + ADD BOOK
-          </button>
+          </Link>
           
           <button 
             onClick={() => {

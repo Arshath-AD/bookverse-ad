@@ -5,7 +5,7 @@ import { useBooks } from '../context/BookContext';
 import { ArrowLeftSVG, InkBurstSVG } from '../components/Icons';
 
 const BookProgressGraphic = ({ currentPage, totalPages, color }: { currentPage: number, totalPages: number, color: string }) => {
-  const percentage = Math.round((currentPage / totalPages) * 100);
+  const percentage = totalPages > 0 ? Math.min(100, Math.max(0, Math.round(((currentPage || 0) / totalPages) * 100))) : 0;
   
   return (
     <div className="relative w-full max-w-[120px] sm:max-w-[150px] md:max-w-[300px] aspect-square mx-auto mt-4 md:mt-8">
@@ -58,7 +58,7 @@ const BookDetails = () => {
     );
   }
 
-  const remainingPages = book.totalPages - book.currentPage;
+  const remainingPages = Math.max(0, (book.totalPages || 0) - (book.currentPage || 0));
 
   return (
     <motion.div 

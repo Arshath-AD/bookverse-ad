@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useBooks } from '../context/BookContext';
 import { BookOpenSVG, CheckSVG, CrossSVG } from '../components/Icons';
 
@@ -12,11 +12,11 @@ const AnimatedCounter = ({ value }: { value: number }) => {
     const end = value;
     if (start === end) return;
     
-    let totalDuration = 1000;
+    const totalDuration = 1000;
     let incrementTime = (totalDuration / end);
     if (incrementTime < 10) incrementTime = 10;
     
-    let timer = setInterval(() => {
+    const timer = setInterval(() => {
       start += 1;
       setCount(start);
       if (start >= end) clearInterval(timer);
@@ -28,7 +28,16 @@ const AnimatedCounter = ({ value }: { value: number }) => {
   return <span>{count}</span>;
 };
 
-const StatCard = ({ title, value, icon, color, onClick, delay }: any) => {
+interface StatCardProps {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+  onClick: () => void;
+  delay: number;
+}
+
+const StatCard = ({ title, value, icon, color, onClick, delay }: StatCardProps) => {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 50 }}
@@ -69,14 +78,30 @@ const Dashboard = () => {
     abandoned: books.filter(b => b.status === 'abandoned').length,
     totalPages: books.reduce((acc, b) => acc + (b.currentPage || 0), 0),
     totalBooks: books.length,
-    avgProgress: books.length ? Math.round(books.reduce((acc, b) => acc + (b.currentPage / b.totalPages) * 100, 0) / books.length) : 0
+    avgProgress: books.length
+      ? Math.round(
+          books.reduce((acc, b) => {
+            const total = b.totalPages > 0 ? b.totalPages : 1;
+            const current = b.currentPage || 0;
+            return acc + Math.min(100, Math.max(0, (current / total) * 100));
+          }, 0) / books.length
+        )
+      : 0
   };
 
   return (
     <div className="p-3 sm:p-4 md:p-12 animate-fade-in">
-      <div className="flex justify-between items-end mb-6 md:mb-10 border-b-2 md:border-b-comic border-ink pb-2 md:pb-4">
-        <h1 className="text-3xl md:text-7xl">EXPLORER'S DESK</h1>
-        <BookOpenSVG className="w-10 h-10 md:w-12 md:h-12 hidden md:block" />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 md:mb-10 border-b-2 md:border-b-comic border-ink pb-2 md:pb-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl md:text-7xl">EXPLORER'S DESK</h1>
+          <BookOpenSVG className="w-8 h-8 md:w-12 md:h-12 hidden md:block" />
+        </div>
+        <Link 
+          to="/add-book" 
+          className="comic-button bg-[var(--color-green)] text-white text-base md:text-xl py-2 px-4 md:px-6 shadow-comic-sm"
+        >
+          + ADD NEW BOOK
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">

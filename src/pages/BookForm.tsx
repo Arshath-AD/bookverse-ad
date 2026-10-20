@@ -1,8 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useBooks, Book } from '../context/BookContext';
+import { useBooks, Book, BookStatus } from '../context/BookContext';
 import { BookOpenSVG, ArrowLeftSVG, InkBurstSVG } from '../components/Icons';
+
+interface BookFormData {
+  title: string;
+  author: string;
+  coverImage: string;
+  summary: string;
+  genre: string;
+  status: BookStatus;
+  totalPages: number | '';
+  currentPage: number | '';
+  startedDate: string;
+  finishedDate: string;
+  favoriteQuote: string;
+  personalThoughts: string;
+  impactScore: number;
+}
 
 const BookForm = () => {
   const navigate = useNavigate();
@@ -12,15 +28,15 @@ const BookForm = () => {
   const isEditing = !!id;
   const existingBook = isEditing ? books.find(b => b.id === id) : null;
 
-  const [formData, setFormData] = useState<Partial<Book>>({
+  const [formData, setFormData] = useState<BookFormData>({
     title: '',
     author: '',
     coverImage: '',
     summary: '',
     genre: '',
     status: 'to-read',
-    totalPages: 0,
-    currentPage: 0,
+    totalPages: '',
+    currentPage: '',
     startedDate: '',
     finishedDate: '',
     favoriteQuote: '',
@@ -30,7 +46,21 @@ const BookForm = () => {
 
   useEffect(() => {
     if (isEditing && existingBook) {
-      setFormData(existingBook);
+      setFormData({
+        title: existingBook.title || '',
+        author: existingBook.author || '',
+        coverImage: existingBook.coverImage || '',
+        summary: existingBook.summary || '',
+        genre: existingBook.genre || '',
+        status: existingBook.status || 'to-read',
+        totalPages: existingBook.totalPages ?? '',
+        currentPage: existingBook.currentPage ?? '',
+        startedDate: existingBook.startedDate || '',
+        finishedDate: existingBook.finishedDate || '',
+        favoriteQuote: existingBook.favoriteQuote || '',
+        personalThoughts: existingBook.personalThoughts || '',
+        impactScore: existingBook.impactScore ?? 0,
+      });
     }
   }, [isEditing, existingBook]);
 
@@ -40,10 +70,17 @@ const BookForm = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'totalPages' || name === 'currentPage' || name === 'impactScore' ? Number(value) : value
-    }));
+    if (name === 'totalPages' || name === 'currentPage') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value === '' ? '' : Math.max(0, parseInt(value, 10) || 0)
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleScoreClick = (score: number) => {
@@ -52,18 +89,44 @@ const BookForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const totalPagesNum = typeof formData.totalPages === 'number' && formData.totalPages > 0 
+      ? formData.totalPages 
+      : 1;
+    const currentPageNum = typeof formData.currentPage === 'number'
+      ? Math.min(totalPagesNum, Math.max(0, formData.currentPage))
+      : (formData.status === 'completed' ? totalPagesNum : 0);
+
+    const colors = ['var(--color-primary)', 'var(--color-purple)', 'var(--color-green)', 'var(--color-red)'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
     
     if (isEditing && existingBook) {
-      updateBook(existingBook.id, formData);
+      updateBook(existingBook.id, {
+        ...formData,
+        title: formData.title.trim(),
+        author: formData.author.trim(),
+        totalPages: totalPagesNum,
+        currentPage: currentPageNum,
+        startedDate: formData.startedDate || null,
+        finishedDate: formData.finishedDate || null,
+      });
       navigate(`/book/${existingBook.id}`);
     } else {
-      const colors = ['var(--color-primary)', 'var(--color-purple)', 'var(--color-green)', 'var(--color-red)'];
-      const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      
       const newBook: Book = {
-        ...(formData as Book),
         id: Date.now().toString(),
-        coverImage: formData.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop',
+        title: formData.title.trim() || 'Untitled Adventure',
+        author: formData.author.trim() || 'Unknown Explorer',
+        coverImage: formData.coverImage.trim() || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop',
+        summary: formData.summary.trim(),
+        genre: formData.genre.trim() || 'General',
+        status: formData.status,
+        totalPages: totalPagesNum,
+        currentPage: currentPageNum,
+        startedDate: formData.startedDate || null,
+        finishedDate: formData.finishedDate || null,
+        favoriteQuote: formData.favoriteQuote.trim(),
+        personalThoughts: formData.personalThoughts.trim(),
+        impactScore: formData.impactScore || 0,
         accentColor: randomColor,
       };
       addBook(newBook);
@@ -142,7 +205,16 @@ const BookForm = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label className="font-bangers text-xl tracking-wider">Total Pages *</label>
-              <input type="number" required name="totalPages" value={formData.totalPages} onChange={handleChange} className="comic-input bg-[var(--color-paper)]" />
+              <input 
+                type="number" 
+                required 
+                min="1"
+                name="totalPages" 
+                value={formData.totalPages} 
+                onChange={handleChange} 
+                className="comic-input bg-[var(--color-paper)]" 
+                placeholder="e.g. 350"
+              />
             </div>
           </div>
           
@@ -170,7 +242,15 @@ const BookForm = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label className="font-bangers text-xl tracking-wider">Current Page</label>
-              <input type="number" name="currentPage" value={formData.currentPage} onChange={handleChange} className="comic-input bg-[var(--color-paper)]" />
+              <input 
+                type="number" 
+                min="0"
+                name="currentPage" 
+                value={formData.currentPage} 
+                onChange={handleChange} 
+                className="comic-input bg-[var(--color-paper)]" 
+                placeholder="0"
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label className="font-bangers text-xl tracking-wider">Started Date</label>
