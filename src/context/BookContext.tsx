@@ -37,7 +37,23 @@ export const BookProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          const brokenMap: Record<string, string> = {
+            'photo-1614729939124-03290b56c9ce': 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=600&auto=format&fit=crop',
+            'photo-1547895240-a1789c0b1154': 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600&auto=format&fit=crop',
+            'photo-1605806616949-1e87b487cb2a': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600&auto=format&fit=crop',
+            'photo-1533038590840-1cbea6e8a4a5': 'https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=600&auto=format&fit=crop',
+          };
+          const healed = parsed.map((book: Book) => {
+            if (book.coverImage) {
+              for (const [brokenId, fixUrl] of Object.entries(brokenMap)) {
+                if (book.coverImage.includes(brokenId)) {
+                  return { ...book, coverImage: fixUrl };
+                }
+              }
+            }
+            return book;
+          });
+          return healed;
         }
       }
     } catch (e) {

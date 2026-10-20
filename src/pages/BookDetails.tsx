@@ -97,7 +97,15 @@ const BookDetails = () => {
             <div className="absolute top-0 right-8 w-8 h-12 bg-[var(--color-primary)] border-x-[var(--comic-border)] border-b-[var(--comic-border)] border-[var(--color-ink)] z-20 flex items-end justify-center pb-2">
               <div className="w-2 h-2 bg-white rounded-full"></div>
             </div>
-            <img src={book.coverImage} alt={book.title} className="w-full h-auto border-[var(--comic-border)] border-[var(--color-ink)]" />
+            <img 
+              src={book.coverImage} 
+              alt={book.title} 
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop';
+              }}
+              className="w-full h-auto object-cover border-[var(--comic-border)] border-[var(--color-ink)]" 
+            />
           </motion.div>
 
           <div className="comic-panel p-3 md:p-6 bg-white relative overflow-hidden">

@@ -20,6 +20,15 @@ interface BookFormData {
   impactScore: number;
 }
 
+const PRESET_COVERS = [
+  { label: '🚀 Sci-Fi', url: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=600&auto=format&fit=crop' },
+  { label: '⚡ Cyberpunk', url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=600&auto=format&fit=crop' },
+  { label: '🏰 Fantasy', url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600&auto=format&fit=crop' },
+  { label: '🌊 Ocean', url: 'https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=600&auto=format&fit=crop' },
+  { label: '🏜️ Desert', url: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600&auto=format&fit=crop' },
+  { label: '📖 Classic', url: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop' },
+];
+
 const BookForm = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -27,6 +36,7 @@ const BookForm = () => {
   
   const isEditing = !!id;
   const existingBook = isEditing ? books.find(b => b.id === id) : null;
+  const [previewError, setPreviewError] = useState(false);
 
   const [formData, setFormData] = useState<BookFormData>({
     title: '',
@@ -75,11 +85,48 @@ const BookForm = () => {
         ...prev,
         [name]: value === '' ? '' : Math.max(0, parseInt(value, 10) || 0)
       }));
+    } else if (name === 'coverImage') {
+      let cleaned = value.trim();
+      if (cleaned.includes('google.') && cleaned.includes('imgurl=')) {
+        try {
+          const urlObj = new URL(cleaned);
+          const direct = urlObj.searchParams.get('imgurl');
+          if (direct) cleaned = decodeURIComponent(direct);
+        } catch {
+          // ignore
+        }
+      }
+      setFormData(prev => ({
+        ...prev,
+        coverImage: cleaned
+      }));
+      setPreviewError(false);
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: value
       }));
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image is too large! Please choose an image under 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setFormData(prev => ({
+            ...prev,
+            coverImage: event.target!.result as string
+          }));
+          setPreviewError(false);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -105,6 +152,7 @@ const BookForm = () => {
         ...formData,
         title: formData.title.trim(),
         author: formData.author.trim(),
+        coverImage: formData.coverImage.trim() || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop',
         totalPages: totalPagesNum,
         currentPage: currentPageNum,
         startedDate: formData.startedDate || null,
@@ -194,11 +242,7 @@ const BookForm = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
-            <div className="flex flex-col gap-2">
-              <label className="font-bangers text-xl tracking-wider">Cover Image URL</label>
-              <input name="coverImage" value={formData.coverImage} onChange={handleChange} className="comic-input bg-[var(--color-paper)]" placeholder="https://..." />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-4 md:mt-6">
             <div className="flex flex-col gap-2">
               <label className="font-bangers text-xl tracking-wider">Genre *</label>
               <input required name="genre" value={formData.genre} onChange={handleChange} className="comic-input bg-[var(--color-paper)]" placeholder="e.g. Sci-Fi" />
@@ -215,6 +259,109 @@ const BookForm = () => {
                 className="comic-input bg-[var(--color-paper)]" 
                 placeholder="e.g. 350"
               />
+            </div>
+          </div>
+
+          {/* COVER IMAGE STUDIO */}
+          <div className="comic-panel p-4 md:p-6 bg-[var(--color-paper)] mt-6 flex flex-col md:flex-row gap-6 items-center">
+            {/* Live Cover Preview */}
+            <div className="flex flex-col items-center flex-shrink-0">
+              <div className="relative w-36 h-48 md:w-44 md:h-60 bg-white border-comic border-ink shadow-comic overflow-hidden flex items-center justify-center">
+                {formData.coverImage ? (
+                  <img 
+                    src={formData.coverImage} 
+                    alt="Cover preview"
+                    referrerPolicy="no-referrer"
+                    onError={() => setPreviewError(true)}
+                    onLoad={() => setPreviewError(false)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-3 text-center opacity-40">
+                    <BookOpenSVG className="w-12 h-12 mb-2" />
+                    <span className="font-bangers text-sm">NO COVER YET</span>
+                  </div>
+                )}
+                {/* Status Badge */}
+                {formData.coverImage && (
+                  <div className="absolute bottom-2 left-2 right-2">
+                    {previewError ? (
+                      <span className="badge bg-[var(--color-red)] text-white text-xs w-full justify-center">
+                        ⚠️ Broken URL
+                      </span>
+                    ) : (
+                      <span className="badge bg-[var(--color-green)] text-white text-xs w-full justify-center">
+                        ✓ Image Loaded
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <span className="font-bangers text-sm mt-2 text-gray-600">LIVE PREVIEW</span>
+            </div>
+
+            {/* URL Input & Controls */}
+            <div className="flex-grow flex flex-col gap-3 w-full">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <label className="font-bangers text-xl tracking-wider">Cover Image URL</label>
+                  {formData.coverImage && (
+                    <button 
+                      type="button" 
+                      onClick={() => { setFormData(prev => ({ ...prev, coverImage: '' })); setPreviewError(false); }}
+                      className="text-xs font-outfit font-bold text-red-600 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <input 
+                  name="coverImage" 
+                  value={formData.coverImage} 
+                  onChange={handleChange} 
+                  className="comic-input bg-white w-full" 
+                  placeholder="Paste any image URL (e.g. https://...)" 
+                />
+                {previewError && (
+                  <p className="text-xs font-outfit text-red-600 font-bold mt-1">
+                    ⚠️ This image URL could not be loaded. Please check that it's a direct image link (.jpg, .png) or select a preset below!
+                  </p>
+                )}
+              </div>
+
+              {/* Or Upload Image from Device */}
+              <div className="flex items-center gap-3">
+                <label className="comic-button bg-white text-ink text-sm py-1.5 px-3 cursor-pointer shadow-sm hover:bg-yellow-50">
+                  📁 UPLOAD FROM DEVICE
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleFileUpload} 
+                    className="hidden" 
+                  />
+                </label>
+                <span className="text-xs font-outfit font-bold text-gray-500">JPG, PNG, WebP (under 2MB)</span>
+              </div>
+
+              {/* Presets */}
+              <div>
+                <span className="font-bangers text-sm text-gray-700 block mb-1">OR CHOOSE A PRESET COVER:</span>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COVERS.map(preset => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, coverImage: preset.url }));
+                        setPreviewError(false);
+                      }}
+                      className="badge bg-white text-ink hover:bg-primary transition-colors text-xs py-1 px-2 cursor-pointer shadow-sm"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           

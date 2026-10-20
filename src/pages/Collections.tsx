@@ -28,6 +28,7 @@ const BookCard = ({ book, index }: { book: Book, index: number }) => {
         <img 
           src={book.coverImage} 
           alt={book.title} 
+          referrerPolicy="no-referrer"
           onError={(e) => {
             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop';
           }}
